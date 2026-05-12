@@ -1,4 +1,5 @@
 import os
+import re
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes, ConversationHandler
 from config import ADMIN_GROUP_ID, PRICE
@@ -51,24 +52,19 @@ async def receive_payment_screenshot(update: Update, context: ContextTypes.DEFAU
     )
     return ConversationHandler.END
 
-
-# 1. BIRINCHI BOSQICH: Tasdiqlash bosilganda xavfsizlik oynasini chiqarish
 async def admin_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     order_id = int(query.data.replace("approve_", ""))
 
-    # Tugmalarni 2-bosqichga o'zgartiramiz
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("⚠️ Ha, tasdiqlayman", callback_data=f"confirm_approve_{order_id}"),
             InlineKeyboardButton("🔙 Bekor qilish", callback_data=f"cancel_approve_{order_id}")
         ]
     ])
-    
     await query.edit_message_reply_markup(reply_markup=keyboard)
 
-# 2. IKKINCHI BOSQICH: Admin rostdan ham tasdiqlasa (Faylni yuborish)
 async def admin_confirm_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -83,7 +79,6 @@ async def admin_confirm_approve(update: Update, context: ContextTypes.DEFAULT_TY
     topic = order[5]
     file_id = order[6]
 
-    # Mijozga yuborish
     await context.bot.send_document(
         chat_id=user_id,
         document=file_id,
@@ -92,34 +87,23 @@ async def admin_confirm_approve(update: Update, context: ContextTypes.DEFAULT_TY
     )
 
     update_status(order_id, "approved")
-    
     await query.edit_message_caption(
         caption=f"📋 Buyurtma №: {order_id}\n\n✅ <b>TASDIQLANDI</b> — Fayl yuborildi!",
         parse_mode="HTML"
     )
 
-# 3. BEKOR QILISH: Admin adashib bosgan bo'lsa, orqaga qaytarish
 async def admin_cancel_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     order_id = int(query.data.replace("cancel_approve_", ""))
 
-    # Asosiy tugmalarni qaytaramiz
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("✅ Tasdiqlash", callback_data=f"approve_{order_id}"),
             InlineKeyboardButton("❌ Rad etish", callback_data=f"reject_{order_id}")
         ]
     ])
-    
     await query.edit_message_reply_markup(reply_markup=keyboard)
-
-    update_status(order_id, "approved")
-    
-    await query.edit_message_caption(
-        caption=f"📋 Buyurtma №: {order_id}\n\n✅ <b>TASDIQLANDI</b> — Fayl yuborildi!",
-        parse_mode="HTML"
-    )
 
 async def admin_reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -147,11 +131,8 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != ADMIN_GROUP_ID:
         return
 
-    # Agar rasm bo'lsa — rasmga reply qilib /reklama yozilgan
     if update.message.photo:
-        caption = update.message.caption or ""
-        # /reklama ni captiondan olib tashlash
-        caption = caption.replace("/reklama", "").strip()
+        caption = (update.message.caption or "").replace("/reklama", "").strip()
         users = get_all_users()
         count = 0
         for user_id in users:
@@ -167,10 +148,8 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"✅ Rasm {count} ta foydalanuvchiga yuborildi!")
         return
 
-    # Agar video bo'lsa
     if update.message.video:
-        caption = update.message.caption or ""
-        caption = caption.replace("/reklama", "").strip()
+        caption = (update.message.caption or "").replace("/reklama", "").strip()
         users = get_all_users()
         count = 0
         for user_id in users:
@@ -186,7 +165,6 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"✅ Video {count} ta foydalanuvchiga yuborildi!")
         return
 
-    # Agar matn bo'lsa
     if not context.args:
         await update.message.reply_text(
             "❌ Foydalanish:\n\n"
@@ -207,6 +185,17 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             continue
     await update.message.reply_text(f"✅ Xabar {count} ta foydalanuvchiga yuborildi!")
+
+async def users_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.id != ADMIN_GROUP_ID:
+        return
+
+    users = get_all_users_details()
+
+    if not users:
+        await update.message.reply_text("📭 Baza hozircha bo'sh. Mijozlar yo'q.")
+        return
+
     text = f"👥 <b>Barcha foydalanuvchilar ro'yxati</b> (Jami: {len(users)} ta)\n\n"
     for index, user in enumerate(users, 1):
         user_id = user[0]
@@ -214,7 +203,7 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += f"{index}. 🆔 <code>{user_id}</code> | 👤 {username}\n"
 
     if len(text) > 4000:
-        await update.message.reply_text("⚠️ Ro'yxat juda uzun! Bir qismi:\n\n" + text[:3800], parse_mode="HTML")
+        await update.message.reply_text("⚠️ Ro'yxat juda uzun!\n\n" + text[:3800], parse_mode="HTML")
     else:
         await update.message.reply_text(text, parse_mode="HTML")
 
@@ -230,7 +219,7 @@ async def send_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         target_user_id = int(context.args[0])
         message_text = " ".join(context.args[1:])
         await context.bot.send_message(chat_id=target_user_id, text=message_text)
-        await update.message.reply_text(f"✅ Xabar yuborildi!")
+        await update.message.reply_text("✅ Xabar yuborildi!")
     except Exception:
         await update.message.reply_text("❌ Xatolik yuz berdi.")
 
@@ -275,12 +264,12 @@ async def b_admin_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = order[1]
     update_status(order_id, "approved")
-    
+
     await context.bot.send_message(
         chat_id=user_id,
         text="✅ <b>To'lovingiz tasdiqlandi!</b>\n\n"
              "Adminlarimiz sizning arizangiz ustida ishlashni boshladi. "
-             "Materialingiz maksimal 2 soat ichida shu bot orqali sizga yuboriladi. Kuting ⏱",
+             "Materialingiz maksimal 1 kun ichida shu bot orqali sizga yuboriladi. Kuting ⏱",
         parse_mode="HTML"
     )
 
@@ -289,72 +278,6 @@ async def b_admin_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
-# 🌟 YANGILANGAN QUROL: 1 qadamda /fayl ID orqali istalgan narsani yuborish
-
-
-
-    # 2. Agar fayl yuborilgan bo'lsa
-    if update.message and update.message.document:
-        # Oldin /fayl buyrug'i yuborilganmi?
-        pending_id = context.user_data.get("pending_file_user_id")
-        
-        if pending_id:
-            file_id = update.message.document.file_id
-            target_user_id = pending_id
-
-            try:
-                await context.bot.send_document(
-                    chat_id=target_user_id, 
-                    document=file_id, 
-                    caption="🎉 <b>Sizning buyurtmangiz tayyor!</b>\n\nIshonchingiz uchun rahmat!", 
-                    parse_mode="HTML"
-                )
-                
-                from database import add_purchase
-                add_purchase(target_user_id, "🏫 Maxsus buyurtma", file_id)
-
-                await update.message.reply_text("✅ Fayl muvaffaqiyatli mijozga yuborildi!")
-                del context.user_data["pending_file_user_id"]
-            except Exception as e:
-                await update.message.reply_text(f"❌ Yuborishda xato: {e}")
-        else:
-            await update.message.reply_text("❌ Avval /fayl ID buyrug'ini yuboring!")
-
-    # 3. Reply usuli - reply orqali fayl yuborish
-    if update.message and update.message.reply_to_message:
-        from config import ADMIN_GROUP_ID
-        if update.effective_chat.id != ADMIN_GROUP_ID:
-            return
-
-        original_msg = update.message.reply_to_message
-        caption = original_msg.caption or original_msg.text or ""
-
-        import re
-        match = re.search(r"🆔 ID:\s*(\d+)", caption)
-        target_user_id = int(match.group(1)) if match else None
-
-        if not target_user_id:
-            match = re.search(r"ID:\s*(\d+)", caption)
-            target_user_id = int(match.group(1)) if match else None
-
-        if target_user_id and update.message.document:
-            file_id = update.message.document.file_id
-            try:
-                await context.bot.send_document(
-                    chat_id=target_user_id,
-                    document=file_id,
-                    caption="🎉 <b>Sizning buyurtmangiz tayyor!</b>\n\nIshonchingiz uchun rahmat!",
-                    parse_mode="HTML"
-                )
-                
-                from database import add_purchase
-                add_purchase(target_user_id, "🏫 Maxsus buyurtma", file_id)
-
-                await update.message.reply_text("✅ Fayl muvaffaqiyatli mijozga yuborildi!")
-            except Exception as e:
-                await update.message.reply_text(f"❌ Xato: {e}")
-
-# 🌟 YANGILIK: Fayl kalitlarini txt faylga saqlaydigan funksiya
 async def catch_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.chat.type in ['group', 'supergroup']:
         file_id = None
@@ -379,80 +302,56 @@ async def catch_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f.write(f'"{file_name}": "{file_id}",\n')
             except Exception as e:
                 print(f"⚠️ Txt ga yozishda xato: {e}", flush=True)
-
             print(f"✅ TXT ga saqlandi: {file_name}", flush=True)
-            # 🌟 YANGI QUROL: REPLY ORQALI FAYL YUBORISH
-# 🌟 YANGILANGAN QUROL 2: REPLY ORQALI YUBORISH
-async def send_file_by_reply(update, context):
-    from config import ADMIN_GROUP_ID
-    import re
-    from database import add_purchase
 
-    # Faqat admin guruhida ishlashi uchun
+async def send_file_by_reply(update, context):
     if update.effective_chat.id != int(ADMIN_GROUP_ID):
         return
 
-    # Reply bo'lmasa indamaydi
     if not update.message.reply_to_message:
         return
 
     original_msg = update.message.reply_to_message
     caption = original_msg.caption or original_msg.text or ""
 
-    # Chek ichidan mijoz ID sini topish
     match = re.search(r"ID:\s*(\d+)", caption)
     if not match:
-        match = re.search(r"🆔 ID:\s*(\d+)", caption) # Emoji bo'lsa ham ushlaydi
-        if not match:
-            await update.message.reply_text("❌ Xato: Reply qilingan chekda mijoz ID si topilmadi!")
-            return 
+        await update.message.reply_text("❌ Xato: Reply qilingan chekda mijoz ID si topilmadi!")
+        return
 
     target_user_id = int(match.group(1))
 
     try:
-        # Eng zo'r usul: copy_message (Fayl, rasm, video farqi yo'q)
         await context.bot.copy_message(
             chat_id=target_user_id,
             from_chat_id=update.effective_chat.id,
             message_id=update.message.message_id,
-            caption="🎉 <b>Sizning buyurtmangiz tayyor!</b>\n\nIshonchingiz uchun rahmat! Fayl 'Mening xaridlarim' bo'limiga saqlandi.",
+            caption="🎉 <b>Sizning buyurtmangiz tayyor!</b>\n\nIshonchingiz uchun rahmat!",
             parse_mode="HTML"
         )
-        
+
         file_id = "Noma'lum"
         if update.message.document:
             file_id = update.message.document.file_id
         elif update.message.photo:
             file_id = update.message.photo[-1].file_id
-            
-        add_purchase(target_user_id, "🏫 Maxsus buyurtma", file_id)
 
-        await update.message.reply_text("✅ Muvaffaqiyatli mijozga yuborildi (Reply orqali)!")
+        add_purchase(target_user_id, "🏫 Maxsus buyurtma", file_id)
+        await update.message.reply_text("✅ Muvaffaqiyatli mijozga yuborildi!")
     except Exception as e:
         await update.message.reply_text(f"❌ Mijozga yuborishda xato: {e}")
-        
-        # 2. Xaridlarga saqlash
-        add_purchase(target_user_id, "🏫 Maxsus buyurtma", file_id)
 
-        await update.message.reply_text("✅ Fayl muvaffaqiyatli mijozga yuborildi va uning xaridlariga qo'shildi!")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Mijozga yuborishda xato (Balki botni bloklagandir): {e}")
-        # 🌟 YANGILANGAN QUROL: 1 qadamda /fayl ID orqali yuborish
 async def send_custom_file(update, context):
-    from config import ADMIN_GROUP_ID
-    import re
-    from database import add_purchase
-
     if update.effective_chat.id != int(ADMIN_GROUP_ID):
         return
 
     caption = update.message.caption or update.message.text or ""
-    
+
     match = re.search(r'/fayl\s+(\d+)', caption)
     if not match:
-        await update.message.reply_text("❌ ID topilmadi! Iltimos, rasm/fayl tagiga: /fayl 123456789 deb yozing.")
+        await update.message.reply_text("❌ ID topilmadi! Format: /fayl 123456789")
         return
-        
+
     target_user_id = int(match.group(1))
 
     try:
@@ -460,18 +359,17 @@ async def send_custom_file(update, context):
             chat_id=target_user_id,
             from_chat_id=update.effective_chat.id,
             message_id=update.message.message_id,
-            caption="🎉 <b>Sizning buyurtmangiz tayyor!</b>\n\nIshonchingiz uchun rahmat! Fayl 'Mening xaridlarim' bo'limiga saqlandi.",
+            caption="🎉 <b>Sizning buyurtmangiz tayyor!</b>\n\nIshonchingiz uchun rahmat!",
             parse_mode="HTML"
         )
-        
+
         file_id = "Noma'lum"
         if update.message.document:
             file_id = update.message.document.file_id
         elif update.message.photo:
             file_id = update.message.photo[-1].file_id
-            
-        add_purchase(target_user_id, "🏫 Maxsus buyurtma", file_id)
 
+        add_purchase(target_user_id, "🏫 Maxsus buyurtma", file_id)
         await update.message.reply_text("✅ Muvaffaqiyatli mijozga yuborildi!")
     except Exception as e:
         await update.message.reply_text(f"❌ Mijozga yuborishda xato: {e}")
