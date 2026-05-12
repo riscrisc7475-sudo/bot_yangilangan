@@ -147,13 +147,58 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != ADMIN_GROUP_ID:
         return
 
+    # Agar rasm bo'lsa — rasmga reply qilib /reklama yozilgan
+    if update.message.photo:
+        caption = update.message.caption or ""
+        # /reklama ni captiondan olib tashlash
+        caption = caption.replace("/reklama", "").strip()
+        users = get_all_users()
+        count = 0
+        for user_id in users:
+            try:
+                await context.bot.send_photo(
+                    chat_id=user_id,
+                    photo=update.message.photo[-1].file_id,
+                    caption=caption
+                )
+                count += 1
+            except Exception:
+                continue
+        await update.message.reply_text(f"✅ Rasm {count} ta foydalanuvchiga yuborildi!")
+        return
+
+    # Agar video bo'lsa
+    if update.message.video:
+        caption = update.message.caption or ""
+        caption = caption.replace("/reklama", "").strip()
+        users = get_all_users()
+        count = 0
+        for user_id in users:
+            try:
+                await context.bot.send_video(
+                    chat_id=user_id,
+                    video=update.message.video.file_id,
+                    caption=caption
+                )
+                count += 1
+            except Exception:
+                continue
+        await update.message.reply_text(f"✅ Video {count} ta foydalanuvchiga yuborildi!")
+        return
+
+    # Agar matn bo'lsa
     if not context.args:
-        await update.message.reply_text("❌ Xato! Foydalanish: <code>/reklama Xabar matni</code>", parse_mode="HTML")
+        await update.message.reply_text(
+            "❌ Foydalanish:\n\n"
+            "📝 <b>Matn:</b> <code>/reklama Xabar matni</code>\n"
+            "🖼 <b>Rasm:</b> Rasmni tashlang, caption ga <code>/reklama Matn</code> yozing\n"
+            "🎥 <b>Video:</b> Videoni tashlang, caption ga <code>/reklama Matn</code> yozing",
+            parse_mode="HTML"
+        )
         return
 
     broadcast_text = " ".join(context.args)
     users = get_all_users()
-    
     count = 0
     for user_id in users:
         try:
@@ -161,19 +206,7 @@ async def broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             count += 1
         except Exception:
             continue
-
-    await update.message.reply_text(f"✅ Xabar {count} ta foydalanuvchiga muvaffaqiyatli yuborildi!")
-
-async def users_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.id != ADMIN_GROUP_ID:
-        return
-
-    users = get_all_users_details()
-
-    if not users:
-        await update.message.reply_text("📭 Baza hozircha bo'sh. Mijozlar yo'q.")
-        return
-
+    await update.message.reply_text(f"✅ Xabar {count} ta foydalanuvchiga yuborildi!")
     text = f"👥 <b>Barcha foydalanuvchilar ro'yxati</b> (Jami: {len(users)} ta)\n\n"
     for index, user in enumerate(users, 1):
         user_id = user[0]
