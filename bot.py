@@ -20,14 +20,13 @@ from handlers.admin import (
     receive_payment_screenshot, admin_approve, admin_reject,
     broadcast_message, users_list, send_to_user, bot_statistics,
     b_admin_approve, send_custom_file, catch_file_id,
-    admin_confirm_approve, admin_cancel_approve, send_file_by_reply # Ikkala qurol ham ulandi!
+    admin_confirm_approve, admin_cancel_approve, send_file_by_reply
 )
 from handlers.buyurtma import (
     buyurtma_start, buy_receive_topic, buy_receive_payment,
     BUY_WAIT_TOPIC, BUY_WAIT_PAYMENT
 )
 
-# 🔍 DETEKTIV FUNKSIYA
 async def xatoni_ushlash(update, context):
     xato_matni = f"❌ DIQQAT, DASTURDA XATO:\n\n{context.error}"
     print(xato_matni)
@@ -118,25 +117,33 @@ def main():
     mtt_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(mtt_start, pattern="^section_mtt$")],
         states={
-            CHOOSE_GROUP: [CallbackQueryHandler(choose_group, pattern="^mtt_group_")],
+            CHOOSE_GROUP: [
+                CallbackQueryHandler(choose_group, pattern="^mtt_group_"),
+                CallbackQueryHandler(start, pattern="^back_to_main$")
+            ],
             CHOOSE_TOPIC: [
                 CallbackQueryHandler(choose_topic, pattern="^mtt_topic_"),
                 CallbackQueryHandler(mtt_ariza_start, pattern="^mtt_ariza_"),
+                CallbackQueryHandler(start, pattern="^back_to_main$")
             ],
             CHOOSE_SUBTOPIC: [
                 CallbackQueryHandler(choose_subtopic, pattern="^mtt_sub_"),
                 CallbackQueryHandler(mtt_ariza_start, pattern="^mtt_ariza_"),
+                CallbackQueryHandler(start, pattern="^back_to_main$")
             ],
             WAIT_PAYMENT: [
                 MessageHandler(filters.PHOTO, receive_payment_screenshot),
-                MessageHandler(filters.ALL & ~filters.PHOTO & ~filters.COMMAND, require_photo)
+                MessageHandler(filters.ALL & ~filters.PHOTO & ~filters.COMMAND, require_photo),
+                CallbackQueryHandler(start, pattern="^back_to_main$")
             ],
             MTT_ARIZA_TOPIC: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, mtt_ariza_receive_topic),
+                CallbackQueryHandler(start, pattern="^back_to_main$")
             ],
             MTT_ARIZA_PAYMENT: [
                 MessageHandler(filters.PHOTO, mtt_ariza_receive_payment),
                 MessageHandler(filters.ALL & ~filters.PHOTO & ~filters.COMMAND, require_photo),
+                CallbackQueryHandler(start, pattern="^back_to_main$")
             ],
         },
         fallbacks=[
@@ -149,10 +156,14 @@ def main():
     boshlangich_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(boshlangich_start, pattern="^section_boshlangich$")],
         states={
-            B_WAIT_TOPIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, b_receive_topic)],
+            B_WAIT_TOPIC: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, b_receive_topic),
+                CallbackQueryHandler(start, pattern="^back_to_main$")
+            ],
             B_WAIT_PAYMENT: [
                 MessageHandler(filters.PHOTO, b_receive_payment),
-                MessageHandler(filters.ALL & ~filters.PHOTO & ~filters.COMMAND, require_photo)
+                MessageHandler(filters.ALL & ~filters.PHOTO & ~filters.COMMAND, require_photo),
+                CallbackQueryHandler(start, pattern="^back_to_main$")
             ],
         },
         fallbacks=[
@@ -162,32 +173,55 @@ def main():
         allow_reentry=True
     )
 
-    # 1. Zanjirli qafaslar
+    buyurtma_conv = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(buyurtma_start, pattern="^section_diplom$"),
+            CallbackQueryHandler(buyurtma_start, pattern="^section_loyiha$"),
+            CallbackQueryHandler(buyurtma_start, pattern="^section_boshqa$"),
+        ],
+        states={
+            BUY_WAIT_TOPIC: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, buy_receive_topic),
+                CallbackQueryHandler(start, pattern="^back_to_main$")
+            ],
+            BUY_WAIT_PAYMENT: [
+                MessageHandler(filters.PHOTO, buy_receive_payment),
+                MessageHandler(filters.ALL & ~filters.PHOTO & ~filters.COMMAND, require_photo),
+                CallbackQueryHandler(start, pattern="^back_to_main$")
+            ],
+        },
+        fallbacks=[
+            CommandHandler("start", start),
+            CallbackQueryHandler(start, pattern="^back_to_main$")
+        ],
+        allow_reentry=True
+    )
+
+    # Zanjirlar
     app.add_handler(mtt_conv)
     app.add_handler(boshlangich_conv)
+    app.add_handler(buyurtma_conv)
 
-    # 2. Asosiy buyruqlar
+    # Buyruqlar
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reklama", broadcast_message))
     app.add_handler(CommandHandler("users", users_list))
     app.add_handler(CommandHandler("send", send_to_user))
     app.add_handler(CommandHandler("stat", bot_statistics))
-    
-    # 3. FAYL YUBORISH QUROLLARI (Reply va /fayl)
-    
-    # A. Reply usuli: Mijoz chekiga "Reply" qilib fayl tashlaganda
-    app.add_handler(MessageHandler(filters.Document.ALL & filters.ChatType.GROUPS & filters.REPLY, send_file_by_reply))
-    
-    # B. /fayl usuli: Fayl YOKI RASM tashlab, izohiga /fayl 1234567 deb yozganda
-    app.add_handler(MessageHandler((filters.Document.ALL | filters.PHOTO) & filters.CaptionRegex(r'^/fayl \d+'), send_custom_file))
-    
-    # C. Arxivchi qorovul (guruhdagi oddiy fayllar uchun)
+
+    # Fayl yuborish
+    app.add_handler(MessageHandler(
+        filters.Document.ALL & filters.ChatType.GROUPS & filters.REPLY, send_file_by_reply
+    ))
+    app.add_handler(MessageHandler(
+        (filters.Document.ALL | filters.PHOTO) & filters.CaptionRegex(r'^/fayl \d+'), send_custom_file
+    ))
     app.add_handler(MessageHandler(
         (filters.Document.ALL | filters.PHOTO | filters.VIDEO | filters.AUDIO) & filters.ChatType.GROUPS & ~filters.REPLY,
         catch_file_id
     ))
 
-    # 4. Tugmalar
+    # Tugmalar
     app.add_handler(CallbackQueryHandler(start, pattern="^check_sub$"))
     app.add_handler(CallbackQueryHandler(start, pattern="^back_to_main$"))
     app.add_handler(CallbackQueryHandler(my_purchases, pattern="^my_purchases$"))
@@ -197,10 +231,10 @@ def main():
     app.add_handler(CallbackQueryHandler(admin_cancel_approve, pattern="^cancel_approve_"))
     app.add_handler(CallbackQueryHandler(admin_reject, pattern="^reject_"))
     app.add_handler(CallbackQueryHandler(b_admin_approve, pattern="^b_approve_"))
-    
+
     app.add_error_handler(xatoni_ushlash)
-    
-    print("✅ Motor ishga tushdi! REPLY va /FAYL tizimlari 100% ulandi!")
+
+    print("✅ Bot ishga tushdi!")
     app.run_polling()
 
 if __name__ == "__main__":
