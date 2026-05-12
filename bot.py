@@ -63,6 +63,9 @@ async def start(update: Update, context):
     keyboard = [
         [InlineKeyboardButton("🧒 MTT (Maktabgacha)", callback_data="section_mtt")],
         [InlineKeyboardButton("🏫 Boshlang'ich ta'lim", callback_data="section_boshlangich")],
+        [InlineKeyboardButton("📝 Diplom ishi", callback_data="section_diplom")],
+        [InlineKeyboardButton("📋 Loyiha ishi", callback_data="section_loyiha")],
+        [InlineKeyboardButton("📌 Boshqa ishlar", callback_data="section_boshqa")],
         [InlineKeyboardButton("📥 Mening xaridlarim", callback_data="my_purchases")],
         [InlineKeyboardButton("👨‍💻 Admin bilan bog'lanish", url="https://t.me/zz6274")]
     ]
