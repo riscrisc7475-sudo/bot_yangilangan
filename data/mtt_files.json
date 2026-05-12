@@ -18,9 +18,12 @@
         "Nutq o'stirish": {
             "1-hafta": "FILE_ID_BU_YERGA"
         }
+         "Elementar Matematika": {
+          "maktab": "qalesz"
+        }
     },
     "O'rta": {
-        "Tabiat va biz": {
+        "Nutq o'stirish": {
             "Yer usti transporti": "BQACAgIAAyEFAATsQEBvAAOLaergLMzBxBZdVqZ68Ao46ZnWybgAAmiOAAIUVFBLSXjhBbBuFtU7BA",
             "Mamlakatimiz do'stlik va tinchlik mamlakati": "BQACAgIAAyEFAATsQEBvAAOTaergLAJBEHxXgH7xEUpUJvVzICIAAmyOAAIUVFBLAAEUEpxhTybPOwQ",
             "Yer sayyorasi kuni": "BQACAgIAAyEFAATsQEBvAAOZaergLMIcTMnpKnWmT01xyyLrW30AAnqOAAIUVFBLO94m5yo73Ro7BA",
@@ -29,13 +32,13 @@
             "Milliy hunarmandchilik": "BQACAgIAAyEFAATsQEBvAAOwaergLIfLPsEPJ7b9BIAAAfTXevg5AAKOjgACFFRQS5OSkgh3S4EgOwQ",
             "Mavsumiy o'zgarishlar": "BQACAgIAAyEFAATsQEBvAAN1aeoAATaSQ5zccC96rYIznm8_G4NrAAKRjgACFFRQS43eWpCQxOOOOwQ",
             "Men va mening tanam": "BQACAgIAAyEFAATsQEBvAAO1aergLFZyeWn70seYNbHjux0kPjgAApOOAAIUVFBLDqPxt-r5R847BA"
-
-
         }
-
+         "Elementar Matematika": {
+          "maktab": "qalesz"
+        }
     },
     "Katta": {
-        "Maktabga tayyorlash": {
+        "Nutq o'stirish": {
              "Sayyorani asra": "BQACAgIAAyEFAATsQEBvAAN_aergLFnPovQV50l5414vhJYuxC8AAl6OAAIUVFBLOklExMC-v907BA",
             "Men va mening ta'nam": "BQACAgIAAyEFAATsQEBvAAOCaergLCq3EP73jt6-3AmyzudByTsAAmKOAAIUVFBLa1Qu2o0cvpI7BA",
             "Qish": "BQACAgIAAyEFAATsQEBvAAOFaergLFnHa9pTMEaVLnaT-_V0MBsAAmGOAAIUVFBL-BV9KO3-3PM7BA",
@@ -45,6 +48,9 @@
             "Xotin qizlar kuni": "BQACAgIAAyEFAATsQEBvAAOxaergLGC5_ZIr9FECzcuIWs4tMO8AAo-OAAIUVFBLmmE2xIH5cP07BA",
             "Men va mening do'stlarim": "BQACAgIAAyEFAATsQEBvAAOvaergLA1e5-ZFvH_JGopnBwYgK4QAAoyOAAIUVFBLZUp_tSBpTOQ7BA"
             
+        }
+         "Elementar Matematika": {
+          "maktab": "www"
         }
     }
 }
