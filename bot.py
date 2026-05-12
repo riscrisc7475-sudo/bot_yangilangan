@@ -22,6 +22,10 @@ from handlers.admin import (
     b_admin_approve, send_custom_file, catch_file_id,
     admin_confirm_approve, admin_cancel_approve, send_file_by_reply # Ikkala qurol ham ulandi!
 )
+from handlers.buyurtma import (
+    buyurtma_start, buy_receive_topic, buy_receive_payment,
+    BUY_WAIT_TOPIC, BUY_WAIT_PAYMENT
+)
 
 # 🔍 DETEKTIV FUNKSIYA
 async def xatoni_ushlash(update, context):
